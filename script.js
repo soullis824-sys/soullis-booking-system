@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- การตั้งค่าหลัก ---
     const API_URL = 'https://soullis-api22.onrender.com'; // URL ของ Render
-    const LIFF_ID = '2008151095-bAD1RDrq'; // <--- ใส่ LIFF ID ที่ถูกต้องของคุณ
+    const LIFF_ID = '2008151095-bAD1RDrq'; // <--- วาง LIFF ID ที่คัดลอกมาใหม่ตรงนี้
     let lineUserId = 'USER_ID_NOT_FOUND';
     let selectedConsultantId = null;
     let unavailableDates = [];

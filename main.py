@@ -33,6 +33,10 @@ def get_availability(consultant_id):
 def submit_booking():
     data = request.get_json()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); booking_id = str(int(datetime.now().timestamp() * 1000))
+    # ปรับปรุง: ตรวจสอบข้อมูลก่อน append
+    required_fields = ['name', 'phone', 'line_user_id', 'consultant_id', 'date', 'time']
+    if not all(field in data for field in required_fields):
+        return jsonify({"status": "error", "message": "Missing required booking data"}), 400
     new_row = [ booking_id, timestamp, data.get('name'), data.get('phone'), data.get('line_user_id'), data.get('consultant_id'), data.get('date'), data.get('time'), 'confirmed' ]
     bookings_sheet.append_row(new_row)
     return jsonify({"status": "success", "booking_id": booking_id})
@@ -44,45 +48,40 @@ def admin_login():
     all_consultants = consultants_sheet.get_all_records()
     for consultant in all_consultants:
         if consultant.get('username') == data.get('username') and consultant.get('password') == data.get('password'):
-            return jsonify({"status": "success", "consultant": {"id": consultant.get('consultant_id'), "name": consultant.get('name')}})
+            # แก้ไข: ส่ง consultant_id กลับไปเป็นสตริง
+            return jsonify({"status": "success", "consultant": {"id": str(consultant.get('consultant_id')), "name": consultant.get('name')}})
     return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
-# ----------------- vvv โค้ดที่แก้ไข vvv -----------------
 @app.route("/get-all-bookings")
 def get_all_bookings():
-    # รับ consultant_id จาก query parameter
-    consultant_id = request.args.get('consultant_id')
+    consultant_id_from_request = request.args.get('consultant_id')
     all_bookings = bookings_sheet.get_all_records()
-
-    if consultant_id:
-        # ถ้ามีการระบุ ID มา ให้กรองข้อมูล
-        try:
-            consultant_id = int(consultant_id)
-            filtered_bookings = [b for b in all_bookings if b.get('consultant_id') and int(b.get('consultant_id')) == consultant_id]
-            return jsonify(filtered_bookings)
-        except (ValueError, TypeError):
-            return jsonify({"error": "Invalid consultant_id format"}), 400
+    if consultant_id_from_request:
+        # ปรับปรุง: กรองข้อมูลโดยใช้การเปรียบเทียบสตริงที่แม่นยำ
+        filtered_bookings = [b for b in all_bookings if str(b.get('consultant_id')) == consultant_id_from_request]
+        return jsonify(filtered_bookings)
     else:
-        # ถ้าไม่ระบุ ID ก็ส่งข้อมูลทั้งหมด (เผื่อไว้สำหรับ Super Admin ในอนาคต)
         return jsonify(all_bookings)
-# ----------------- ^^^ โค้ดที่แก้ไข ^^^ -----------------
 
 @app.route("/update-availability", methods=['POST'])
 def update_availability():
-    # ... (โค้ดเดิม) ...
     try:
         data = request.get_json()
-        consultant_id = data.get('consultant_id'); date = data.get('date'); status = data.get('status')
+        consultant_id = str(data.get('consultant_id')); date = data.get('date'); status = data.get('status')
         if not all([consultant_id, date, status]): return jsonify({"status": "error", "message": "Missing data"}), 400
-        cell_list = availability_sheet.findall(date, in_column=2)
+
+        # ปรับปรุง: ใช้ findall ที่แม่นยำขึ้นเพื่อหาแถวที่ตรงกับทั้ง consultant_id และ date
+        all_availability = availability_sheet.get_all_records()
         found_row_number = None
-        for cell in cell_list:
-            try:
-                if int(availability_sheet.cell(cell.row, 1).value) == consultant_id:
-                    found_row_number = cell.row; break
-            except (ValueError, TypeError): continue
-        if found_row_number: availability_sheet.update_cell(found_row_number, 3, status)
-        else: availability_sheet.append_row([consultant_id, date, status])
+        for i, row in enumerate(all_availability):
+            if str(row.get('consultant_id')) == consultant_id and row.get('date') == date:
+                found_row_number = i + 2 # +2 เพราะ index แถวใน gspread เริ่มที่ 1 และ records ไม่รวม header
+                break
+
+        if found_row_number:
+            availability_sheet.update_cell(found_row_number, 3, status)
+        else:
+            availability_sheet.append_row([consultant_id, date, status])
         return jsonify({"status": "success", "message": f"Availability for {date} updated to {status}"})
     except Exception as e:
         print(f"An error occurred in update_availability: {e}")

@@ -33,13 +33,25 @@ def get_availability(consultant_id):
 @app.route("/submit-booking", methods=['POST'])
 def submit_booking():
     data = request.get_json()
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); booking_id = str(int(datetime.now().timestamp() * 1000))
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    booking_id = str(int(datetime.now().timestamp() * 1000))
     required_fields = ['name', 'phone', 'line_user_id', 'consultant_id', 'date', 'time']
     if not all(field in data for field in required_fields):
         return jsonify({"status": "error", "message": "Missing required booking data"}), 400
-    # บันทึก consultant_id เป็นสตริงเสมอ
-    consultant_id_str = str(data.get('consultant_id'))
-    new_row = [ booking_id, timestamp, data.get('name'), data.get('phone'), data.get('line_user_id'), consultant_id_str, data.get('date'), data.get('time'), 'confirmed' ]
+    
+    # แก้ไขการเรียงลำดับของข้อมูลในแถวใหม่ ให้ตรงกับคอลัมน์ใน Google Sheet
+    new_row = [
+        booking_id,
+        timestamp,
+        data.get('date'),
+        data.get('time'),
+        data.get('name'),
+        data.get('phone'),
+        str(data.get('consultant_id')), #<--- บันทึกเป็นสตริงและอยู่ในตำแหน่งที่ถูกต้อง
+        data.get('line_user_id'),
+        'confirmed'
+    ]
+    
     bookings_sheet.append_row(new_row)
     return jsonify({"status": "success", "booking_id": booking_id})
 

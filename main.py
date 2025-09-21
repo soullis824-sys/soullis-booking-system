@@ -1,13 +1,11 @@
+# ... (ส่วน import และ setup เหมือนเดิม) ...
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, jsonify, request
 from datetime import datetime
 from flask_cors import CORS
-
-# ... (ส่วน Setup เหมือนเดิม) ...
 app = Flask(__name__)
 CORS(app)
-# ... (ส่วนเชื่อมต่อ Google Sheets เหมือนเดิม) ...
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets', "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
 creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
 client = gspread.authorize(creds)
@@ -16,44 +14,30 @@ consultants_sheet = spreadsheet.worksheet("Consultants")
 availability_sheet = spreadsheet.worksheet("Availability")
 bookings_sheet = spreadsheet.worksheet("Bookings")
 
-# --- API Endpoints ---
-
-# == User App APIs ==
+# ... (ส่วน User App APIs เหมือนเดิม) ...
 @app.route("/get-consultants")
-def get_consultants():
-    # ... (โค้ดเดิม) ...
-    return jsonify(consultants_sheet.get_all_records())
-
-# ----------------- vvv โค้ดใหม่ที่เพิ่มเข้ามา vvv -----------------
+def get_consultants(): return jsonify(consultants_sheet.get_all_records())
 @app.route("/get-my-bookings")
 def get_my_bookings():
     user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    
+    if not user_id: return jsonify({"error": "User ID is required"}), 400
     all_bookings = bookings_sheet.get_all_records()
     my_bookings = [b for b in all_bookings if b.get('line_user_id') == user_id]
-    
     return jsonify(my_bookings)
-# ----------------- ^^^ โค้dใหม่ที่เพิ่มเข้ามา ^^^ -----------------
-
 @app.route("/get-availability/<int:consultant_id>")
 def get_availability(consultant_id):
-    # ... (โค้ดเดิม) ...
     all_availability = availability_sheet.get_all_records()
     unavailable_dates = [r['date'] for r in all_availability if r.get('consultant_id') and int(r.get('consultant_id')) == consultant_id and r.get('status') == 'unavailable']
     return jsonify(unavailable_dates)
-
 @app.route("/submit-booking", methods=['POST'])
 def submit_booking():
-    # ... (โค้ดเดิม) ...
     data = request.get_json()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S"); booking_id = str(int(datetime.now().timestamp() * 1000))
     new_row = [ booking_id, timestamp, data.get('name'), data.get('phone'), data.get('line_user_id'), data.get('consultant_id'), data.get('date'), data.get('time'), 'confirmed' ]
     bookings_sheet.append_row(new_row)
     return jsonify({"status": "success", "booking_id": booking_id})
 
-# ... (Admin App APIs เหมือนเดิม) ...
+# --- Admin App APIs ---
 @app.route("/admin-login", methods=['POST'])
 def admin_login():
     data = request.get_json()
@@ -62,10 +46,30 @@ def admin_login():
         if consultant.get('username') == data.get('username') and consultant.get('password') == data.get('password'):
             return jsonify({"status": "success", "consultant": {"id": consultant.get('consultant_id'), "name": consultant.get('name')}})
     return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+
+# ----------------- vvv โค้ดที่แก้ไข vvv -----------------
 @app.route("/get-all-bookings")
-def get_all_bookings(): return jsonify(bookings_sheet.get_all_records())
+def get_all_bookings():
+    # รับ consultant_id จาก query parameter
+    consultant_id = request.args.get('consultant_id')
+    all_bookings = bookings_sheet.get_all_records()
+
+    if consultant_id:
+        # ถ้ามีการระบุ ID มา ให้กรองข้อมูล
+        try:
+            consultant_id = int(consultant_id)
+            filtered_bookings = [b for b in all_bookings if b.get('consultant_id') and int(b.get('consultant_id')) == consultant_id]
+            return jsonify(filtered_bookings)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid consultant_id format"}), 400
+    else:
+        # ถ้าไม่ระบุ ID ก็ส่งข้อมูลทั้งหมด (เผื่อไว้สำหรับ Super Admin ในอนาคต)
+        return jsonify(all_bookings)
+# ----------------- ^^^ โค้ดที่แก้ไข ^^^ -----------------
+
 @app.route("/update-availability", methods=['POST'])
 def update_availability():
+    # ... (โค้ดเดิม) ...
     try:
         data = request.get_json()
         consultant_id = data.get('consultant_id'); date = data.get('date'); status = data.get('status')

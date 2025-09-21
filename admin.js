@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let loggedInConsultant = null;
 
-    // --- ฟังก์ชันใหม่: สำหรับแสดงข้อความแจ้งเตือน ---
+    // --- ฟังก์ชันสำหรับแสดงข้อความแจ้งเตือน ---
     function showStatusMessage(message, isError = false) {
         statusMessage.textContent = message;
         statusMessage.classList.remove(isError ? 'bg-green-500' : 'bg-red-500');
@@ -25,10 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
         statusMessage.classList.remove('opacity-0');
         setTimeout(() => {
             statusMessage.classList.add('opacity-0');
-        }, 3000); // ข้อความจะหายไปใน 3 วินาที
+        }, 3000);
     }
 
-    // --- 1. จัดการการ Login ---
+    // --- จัดการการ Login ---
     loginButton.addEventListener('click', async () => {
         const username = usernameInput.value;
         const password = passwordInput.value;
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { showStatusMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', true); }
     });
 
-    // --- 2. แสดง Dashboard และดึงข้อมูล ---
+    // --- แสดง Dashboard ---
     function showDashboard() {
         welcomeMessage.textContent = `สวัสดี, ${loggedInConsultant.name}`;
         loginScreen.classList.add('hidden');
@@ -55,15 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchAndDisplayBookings();
     }
 
+    // ----------------- vvv โค้ดที่แก้ไขล่าสุดอยู่ตรงนี้ vvv -----------------
     async function fetchAndDisplayBookings() {
+        if (!loggedInConsultant) return; // ป้องกันการทำงานก่อน Login
+
         try {
-            const response = await fetch(`${API_URL}/get-all-bookings`);
+            // ส่ง ID ของคนที่ Login ไปกับ URL เพื่อขอเฉพาะข้อมูลของตัวเอง
+            const response = await fetch(`${API_URL}/get-all-bookings?consultant_id=${loggedInConsultant.id}`);
             const bookings = await response.json();
             
             bookingsTableBody.innerHTML = '';
             if (bookings.length === 0) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="3" class="px-4 py-4 text-center text-gray-500">ยังไม่มีการนัดหมาย</td>`;
+                // เปลี่ยนข้อความให้สื่อความหมายมากขึ้น
+                tr.innerHTML = `<td colspan="3" class="px-4 py-4 text-center text-gray-500">ยังไม่มีการนัดหมายสำหรับคุณ</td>`;
                 bookingsTableBody.appendChild(tr);
                 return;
             }
@@ -79,10 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 bookingsTableBody.appendChild(tr);
             });
-        } catch (error) { showStatusMessage('ไม่สามารถโหลดข้อมูลการนัดหมายได้', true); }
+        } catch (error) { 
+            console.error('Fetch Bookings Error:', error);
+            showStatusMessage('ไม่สามารถโหลดข้อมูลการนัดหมายได้', true); 
+        }
     }
+    // ----------------- ^^^ โค้ดที่แก้ไขล่าสุดอยู่ตรงนี้ ^^^ -----------------
     
-    // --- 3. จัดการตารางเวลา ---
+    // --- จัดการตารางเวลา ---
     setUnavailableBtn.addEventListener('click', () => updateAvailability('unavailable'));
     setAvailableBtn.addEventListener('click', () => updateAvailability('available'));
 
@@ -103,6 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { showStatusMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', true); }
     }
 
-    // --- 4. จัดการการ Logout ---
+    // --- จัดการการ Logout ---
     logoutButton.addEventListener('click', () => { window.location.reload(); });
 });

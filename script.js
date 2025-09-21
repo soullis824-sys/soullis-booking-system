@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- การตั้งค่าหลัก ---
     const API_URL = 'https://soullis-api22.onrender.com'; // URL ของ Render
-    const LIFF_ID = 'Y2008151095-bAD1RDrq'; // <--- ใส่ LIFF ID ที่ถูกต้องของคุณ
+    const LIFF_ID = '2008151095-bAD1RDrq'; // <--- ใส่ LIFF ID ที่ถูกต้องของคุณ
     let lineUserId = 'USER_ID_NOT_FOUND';
     let selectedConsultantId = null;
     let unavailableDates = [];
@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitButton = document.getElementById('submit-button');
     
     // --- ฟังก์ชันหลัก ---
-
     async function initializeLiff() {
         try {
             await liff.init({ liffId: LIFF_ID });
@@ -33,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('LIFF initialization failed', error);
-            consultantSelection.innerHTML = '<p class="text-red-500 col-span-3">เกิดข้อผิดพลาดในการเชื่อมต่อกับ LINE</p>';
+            consultantSelection.innerHTML = '<p class="text-red-500 col-span-3 text-center">เกิดข้อผิดพลาดในการเชื่อมต่อกับ LINE</p>';
         }
     }
 
@@ -61,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } catch (error) {
             console.error('Error fetching consultants:', error);
-            consultantSelection.innerHTML = '<p class="text-red-500 col-span-3">ไม่สามารถโหลดข้อมูลผู้ให้คำปรึกษาได้</p>';
+            consultantSelection.innerHTML = '<p class="text-red-500 col-span-3 text-center">ไม่สามารถโหลดข้อมูลผู้ให้คำปรึกษาได้</p>';
         }
     }
 
@@ -112,15 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     submitButton.addEventListener('click', async () => {
-        const bookingData = {
-            name: userNameInput.value,
-            phone: userPhoneInput.value,
-            line_user_id: lineUserId,
-            consultant_id: selectedConsultantId,
-            date: bookingDateInput.value,
-            time: bookingTimeInput.value
-        };
-
+        const bookingData = { name: userNameInput.value, phone: userPhoneInput.value, line_user_id: lineUserId, consultant_id: selectedConsultantId, date: bookingDateInput.value, time: bookingTimeInput.value };
         if (!bookingData.name || !bookingData.phone || !bookingData.date || !bookingData.time) {
             alert('กรุณากรอกข้อมูลให้ครบถ้วน'); return;
         }
@@ -135,9 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.status === 'success') {
                 alert(`การจองสำเร็จ!\nหมายเลขการจองของคุณคือ: ${result.booking_id}`);
                 window.location.reload();
-            } else {
-                alert('เกิดข้อผิดพลาดในการจอง กรุณาลองใหม่อีกครั้ง');
-            }
+            } else { alert('เกิดข้อผิดพลาดในการจอง กรุณาลองใหม่อีกครั้ง'); }
         } catch (error) {
             console.error('Error submitting booking:', error);
             alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');

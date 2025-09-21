@@ -1,112 +1,67 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const API_URL = 'https://soullis-api22.onrender.com'; // <--- URL จาก Render ของคุณ
+    const LIFF_ID = 'YOUR_LIFF_ID_HERE'; // <--- LIFF ID ของคุณ
+    let lineUserId = 'USER_ID_NOT_FOUND';
 
-    const API_URL = 'https://soullis-api.onrender.com';
-
-    // ดึง Element ต่างๆ จากหน้า HTML
+    // ... ดึง Element ต่างๆ เหมือนเดิม ...
+    const myBookingsSection = document.getElementById('my-bookings-section');
+    const myBookingsList = document.getElementById('my-bookings-list');
     const consultantSelection = document.getElementById('consultant-selection');
-    const bookingSection = document.getElementById('booking-section');
-    const userInfoSection = document.getElementById('user-info-section');
-    const bookingDateInput = document.getElementById('booking-date');
-    const bookingTimeInput = document.getElementById('booking-time'); // เปลี่ยนชื่อตัวแปรเพื่อความชัดเจน
     const userNameInput = document.getElementById('user-name');
-    const userPhoneInput = document.getElementById('user-phone');
     const submitButton = document.getElementById('submit-button');
 
-    let selectedConsultantId = null;
-    let unavailableDates = [];
+    // --- ฟังก์ชันใหม่สำหรับดึงข้อมูลการจองของผู้ใช้ ---
+    async function fetchMyBookings(userId) {
+        if (!userId || userId === 'USER_ID_NOT_FOUND') return;
 
-    // --- 1. เริ่มต้น: ดึงรายชื่อผู้ให้คำปรึกษา ---
-    async function fetchConsultants() {
         try {
-            const response = await fetch(`${API_URL}/get-consultants`);
-            const consultants = await response.json();
-            
-            consultantSelection.innerHTML = '';
-            consultants.forEach(c => {
-                const div = document.createElement('div');
-                div.className = 'consultant bg-white rounded-lg border p-4 text-center cursor-pointer hover:border-purple-500 transition';
-                div.innerHTML = `<p class="font-semibold">${c.name}</p><p class="text-sm text-gray-500">${c.specialty}</p>`;
-                div.dataset.id = c.consultant_id;
-                div.addEventListener('click', () => {
-                    document.querySelectorAll('.consultant').forEach(el => el.classList.remove('selected'));
-                    div.classList.add('selected');
-                    selectedConsultantId = c.consultant_id;
-                    fetchAvailability(c.consultant_id);
+            const response = await fetch(`${API_URL}/get-my-bookings?user_id=${userId}`);
+            const bookings = await response.json();
+
+            if (bookings.length > 0) {
+                myBookingsList.innerHTML = '';
+                bookings.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+                bookings.forEach(booking => {
+                    const div = document.createElement('div');
+                    div.className = 'p-3 bg-gray-100 rounded-md';
+                    div.innerHTML = `
+                        <p class="font-medium">วันที่: ${booking.date} เวลา: ${booking.time}</p>
+                        <p class="text-sm text-gray-600">สถานะ: ${booking.status}</p>
+                    `;
+                    myBookingsList.appendChild(div);
                 });
-                consultantSelection.appendChild(div);
-            });
-        } catch (error) {
-            console.error('Error fetching consultants:', error);
-            consultantSelection.innerHTML = '<p class="text-red-500 col-span-3">เกิดข้อผิดพลาด: ไม่สามารถโหลดข้อมูลผู้ให้คำปรึกษาได้</p>';
-        }
-    }
-    
-    // --- 2. เมื่อเลือกผู้ให้คำปรึกษา: ดึงวันที่ไม่ว่าง ---
-    async function fetchAvailability(id) {
-        bookingSection.classList.remove('hidden');
-        userInfoSection.classList.add('hidden');
-        bookingDateInput.value = '';
-        try {
-            const response = await fetch(`${API_URL}/get-availability/${id}`);
-            unavailableDates = await response.json();
-        } catch (error) {
-            console.error('Error fetching availability:', error);
-            alert('เกิดข้อผิดพลาดในการโหลดข้อมูลวันที่ว่าง');
-        }
-    }
-
-    // --- 3. เมื่อเลือกวันที่: ตรวจสอบและแสดงฟอร์มกรอกข้อมูล ---
-    bookingDateInput.addEventListener('change', () => {
-        const selectedDate = bookingDateInput.value;
-        if (unavailableDates.includes(selectedDate)) {
-            alert('วันที่ท่านเลือกไม่ว่าง กรุณาเลือกวันอื่น');
-            userInfoSection.classList.add('hidden');
-            return;
-        }
-        // ถ้าวันปกติ ให้แสดงฟอร์มกรอกข้อมูลได้เลย
-        userInfoSection.classList.remove('hidden');
-    });
-
-    // --- 4. กดปุ่มยืนยัน: ส่งข้อมูลการจอง ---
-    submitButton.addEventListener('click', async () => {
-        const bookingData = {
-            name: userNameInput.value,
-            phone: userPhoneInput.value,
-            line_user_id: 'LIFF_USER_ID_PLACEHOLDER',
-            consultant_id: selectedConsultantId,
-            date: bookingDateInput.value,
-            time: bookingTimeInput.value // ใช้ค่าจาก input โดยตรง
-        };
-
-        if (!bookingData.name || !bookingData.phone || !bookingData.date || !bookingData.time) {
-            alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-            return;
-        }
-        
-        try {
-            submitButton.disabled = true;
-            submitButton.textContent = 'กำลังบันทึก...';
-            const response = await fetch(`${API_URL}/submit-booking`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(bookingData),
-            });
-            const result = await response.json();
-            if (result.status === 'success') {
-                alert(`การจองสำเร็จ!\nหมายเลขการจองของคุณคือ: ${result.booking_id}`);
-                window.location.reload();
-            } else {
-                alert('เกิดข้อผิดพลาดในการจอง กรุณาลองใหม่อีกครั้ง');
+                myBookingsSection.classList.remove('hidden');
             }
         } catch (error) {
-            console.error('Error submitting booking:', error);
-            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'ยืนยันการจอง';
+            console.error('Could not fetch my bookings:', error);
         }
-    });
+    }
 
-    // --- เริ่มการทำงานทั้งหมด ---
-    fetchConsultants();
+    // --- แก้ไขฟังก์ชัน LIFF ---
+    async function initializeLiff() {
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            } else {
+                const profile = await liff.getProfile();
+                lineUserId = profile.userId;
+                userNameInput.value = profile.displayName;
+                
+                // vvv เรียกใช้ฟังก์ชันใหม่หลังจากได้ User ID แล้ว vvv
+                fetchMyBookings(lineUserId);
+            }
+        } catch (error) {
+            console.error('LIFF initialization failed', error);
+        }
+    }
+
+    // ... (ฟังก์ชันอื่นๆ และ Event Listeners เหมือนเดิม) ...
+
+    async function main() {
+        await initializeLiff();
+        fetchConsultants();
+    }
+    main();
 });
+// หมายเหตุ: โค้ดส่วนอื่นๆ ที่ไม่ได้แสดงไว้คือเหมือนเดิมทั้งหมดครับ

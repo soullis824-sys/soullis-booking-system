@@ -8,18 +8,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         body { font-family: 'Kanit', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .consultant.selected {
-            border-color: #764ba2;
-            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.3);
-        }
+        .consultant.selected { border-color: #764ba2; box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.3); }
     </style>
 </head>
 <body class="bg-gray-50">
-
     <div class="min-h-screen">
         <header class="gradient-bg text-white p-4 shadow-lg sticky top-0 z-10">
             <div class="flex items-center justify-center max-w-4xl mx-auto">
@@ -29,6 +26,12 @@
 
         <main class="p-6 max-w-4xl mx-auto">
             <div class="bg-white rounded-xl card-shadow p-6 md:p-8">
+                
+                <div id="my-bookings-section" class="mb-8 hidden">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">การนัดหมายของคุณ</h3>
+                    <div id="my-bookings-list" class="space-y-3">
+                        </div>
+                </div>
                 
                 <div class="step mb-6">
                     <h3 class="text-xl font-semibold text-gray-800 mb-4">ขั้นตอนที่ 1: เลือกผู้ให้คำปรึกษา</h3>
@@ -67,7 +70,6 @@
             </div>
         </main>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>

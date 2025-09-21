@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = 'https://soullis-api.onrender.com';
+    const API_URL = 'https://soullis-api22.onrender.com';
 
     // ดึง Element ต่างๆ มาใช้งาน
     const loginScreen = document.getElementById('login-screen');

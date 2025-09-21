@@ -1,4 +1,3 @@
-# ... (ส่วน import และ setup เหมือนเดิม) ...
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask, jsonify, request
@@ -24,11 +23,13 @@ def get_my_bookings():
     all_bookings = bookings_sheet.get_all_records()
     my_bookings = [b for b in all_bookings if b.get('line_user_id') == user_id]
     return jsonify(my_bookings)
+
 @app.route("/get-availability/<consultant_id>")
 def get_availability(consultant_id):
     all_availability = availability_sheet.get_all_records()
-    unavailable_dates = [r['date'] for r in all_availability if r.get('consultant_id') and str(r.get('consultant_id')) == consultant_id and r.get('status') == 'unavailable']
+    unavailable_dates = [r['date'] for r in all_availability if r.get('consultant_id') and str(r.get('consultant_id')) == str(consultant_id) and r.get('status') == 'unavailable']
     return jsonify(unavailable_dates)
+
 @app.route("/submit-booking", methods=['POST'])
 def submit_booking():
     data = request.get_json()
@@ -70,15 +71,13 @@ def update_availability():
         data = request.get_json()
         consultant_id = str(data.get('consultant_id')); date = data.get('date'); status = data.get('status')
         if not all([consultant_id, date, status]): return jsonify({"status": "error", "message": "Missing data"}), 400
-
         all_availability = availability_sheet.get_all_records()
         found_row_number = None
         for i, row in enumerate(all_availability):
             # ปรับปรุง: เปรียบเทียบเป็นสตริง
-            if str(row.get('consultant_id')) == consultant_id and row.get('date') == date:
+            if str(row.get('consultant_id')) == str(consultant_id) and row.get('date') == date:
                 found_row_number = i + 2
                 break
-
         if found_row_number:
             availability_sheet.update_cell(found_row_number, 3, status)
         else:

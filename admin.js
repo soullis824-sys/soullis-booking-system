@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     const API_URL = 'https://soullis-api22.onrender.com';
-
-    // ดึง Element ต่างๆ มาใช้งาน
     const loginScreen = document.getElementById('login-screen');
     const dashboardScreen = document.getElementById('dashboard-screen');
     const usernameInput = document.getElementById('username');
@@ -17,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let loggedInConsultant = null;
 
-    // --- ฟังก์ชันสำหรับแสดงข้อความแจ้งเตือน ---
     function showStatusMessage(message, isError = false) {
         statusMessage.textContent = message;
         statusMessage.classList.remove(isError ? 'bg-green-500' : 'bg-red-500');
@@ -28,70 +25,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
 
-    // --- จัดการการ Login ---
     loginButton.addEventListener('click', async () => {
         const username = usernameInput.value;
         const password = passwordInput.value;
         try {
             const response = await fetch(`${API_URL}/admin-login`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ username, password })
             });
             const result = await response.json();
             if (result.status === 'success') {
                 loggedInConsultant = result.consultant;
-                showDashboard();
+                welcomeMessage.textContent = `ยินดีต้อนรับ, ${loggedInConsultant.name}!`;
+                loginScreen.classList.add('hidden');
+                dashboardScreen.classList.remove('hidden');
+                fetchBookings();
+                showStatusMessage('เข้าสู่ระบบสำเร็จแล้ว');
             } else {
-                showStatusMessage('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', true);
+                showStatusMessage(result.message, true);
             }
-        } catch (error) { showStatusMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', true); }
+        } catch (error) {
+            showStatusMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', true);
+        }
     });
 
-    // --- แสดง Dashboard ---
-    function showDashboard() {
-        welcomeMessage.textContent = `สวัสดี, ${loggedInConsultant.name}`;
-        loginScreen.classList.add('hidden');
-        dashboardScreen.classList.remove('hidden');
-        fetchAndDisplayBookings();
-    }
+    logoutButton.addEventListener('click', () => {
+        loggedInConsultant = null;
+        loginScreen.classList.remove('hidden');
+        dashboardScreen.classList.add('hidden');
+        showStatusMessage('ออกจากระบบแล้ว');
+    });
 
-    // ----------------- vvv โค้ดที่แก้ไขล่าสุดอยู่ตรงนี้ vvv -----------------
-    async function fetchAndDisplayBookings() {
-        if (!loggedInConsultant) return; // ป้องกันการทำงานก่อน Login
+    async function fetchBookings() {
+        bookingsTableBody.innerHTML = '<tr><td colspan="3" class="text-center p-4">กำลังโหลดข้อมูล...</td></tr>';
+        
+        if (!loggedInConsultant || !loggedInConsultant.id) {
+            showStatusMessage('ไม่พบข้อมูลผู้ให้คำปรึกษา', true);
+            bookingsTableBody.innerHTML = '<tr><td colspan="3" class="text-center p-4">ไม่พบข้อมูลผู้ให้คำปรึกษา กรุณาล็อกอินใหม่</td></tr>';
+            return;
+        }
 
         try {
-            // ส่ง ID ของคนที่ Login ไปกับ URL เพื่อขอเฉพาะข้อมูลของตัวเอง
-            const response = await fetch(`${API_URL}/get-all-bookings?consultant_id=${loggedInConsultant.id}`);
+            const consultantId = loggedInConsultant.id;
+            const response = await fetch(`${API_URL}/get-all-bookings?consultant_id=${consultantId}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             const bookings = await response.json();
             
             bookingsTableBody.innerHTML = '';
             if (bookings.length === 0) {
-                const tr = document.createElement('tr');
-                // เปลี่ยนข้อความให้สื่อความหมายมากขึ้น
-                tr.innerHTML = `<td colspan="3" class="px-4 py-4 text-center text-gray-500">ยังไม่มีการนัดหมายสำหรับคุณ</td>`;
-                bookingsTableBody.appendChild(tr);
+                bookingsTableBody.innerHTML = '<tr><td colspan="3" class="text-center p-4">ไม่มีรายการนัดหมาย</td></tr>';
                 return;
             }
             
-            bookings.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-            
             bookings.forEach(booking => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm font-medium text-gray-900">${booking.date}</div><div class="text-sm text-gray-500">${booking.time}</div></td>
-                    <td class="px-4 py-3 whitespace-nowrap"><div class="text-sm text-gray-900">${booking.name}</div><div class="text-sm text-gray-500">${booking.phone}</div></td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${booking.consultant_id}</td>
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-3">${booking.date} / ${booking.time}</td>
+                    <td class="px-4 py-3">${booking.name} (${booking.phone})</td>
+                    <td class="px-4 py-3">${booking.consultant_id}</td>
                 `;
-                bookingsTableBody.appendChild(tr);
+                bookingsTableBody.appendChild(row);
             });
+            
         } catch (error) { 
             console.error('Fetch Bookings Error:', error);
             showStatusMessage('ไม่สามารถโหลดข้อมูลการนัดหมายได้', true); 
         }
     }
-    // ----------------- ^^^ โค้ดที่แก้ไขล่าสุดอยู่ตรงนี้ ^^^ -----------------
-    
-    // --- จัดการตารางเวลา ---
+
     setUnavailableBtn.addEventListener('click', () => updateAvailability('unavailable'));
     setAvailableBtn.addEventListener('click', () => updateAvailability('available'));
 
@@ -107,11 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const result = await response.json();
             if (result.status === 'success') {
-                showStatusMessage(`วันที่ ${date} ถูกตั้งค่าเป็น "${status}" เรียบร้อยแล้ว`);
+                showStatusMessage(`วันที่ ${date} ถูกตั้งค่าเป็น \"${status}\" เรียบร้อยแล้ว`);
             } else { showStatusMessage('เกิดข้อผิดพลาดในการอัปเดต', true); }
         } catch (error) { showStatusMessage('เกิดข้อผิดพลาดในการเชื่อมต่อ', true); }
     }
-
-    // --- จัดการการ Logout ---
-    logoutButton.addEventListener('click', () => { window.location.reload(); });
 });

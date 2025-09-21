@@ -23,13 +23,13 @@ def get_my_bookings():
     all_bookings = bookings_sheet.get_all_records()
     my_bookings = [b for b in all_bookings if b.get('line_user_id') == user_id]
     return jsonify(my_bookings)
-
+    
 @app.route("/get-availability/<consultant_id>")
 def get_availability(consultant_id):
     all_availability = availability_sheet.get_all_records()
     unavailable_dates = [r['date'] for r in all_availability if r.get('consultant_id') and str(r.get('consultant_id')) == str(consultant_id) and r.get('status') == 'unavailable']
     return jsonify(unavailable_dates)
-
+    
 @app.route("/submit-booking", methods=['POST'])
 def submit_booking():
     data = request.get_json()
@@ -37,7 +37,7 @@ def submit_booking():
     required_fields = ['name', 'phone', 'line_user_id', 'consultant_id', 'date', 'time']
     if not all(field in data for field in required_fields):
         return jsonify({"status": "error", "message": "Missing required booking data"}), 400
-    # ปรับปรุง: ตรวจสอบและบันทึก consultant_id เป็นสตริงเสมอ
+    # บันทึก consultant_id เป็นสตริงเสมอ
     consultant_id_str = str(data.get('consultant_id'))
     new_row = [ booking_id, timestamp, data.get('name'), data.get('phone'), data.get('line_user_id'), consultant_id_str, data.get('date'), data.get('time'), 'confirmed' ]
     bookings_sheet.append_row(new_row)
@@ -50,21 +50,21 @@ def admin_login():
     all_consultants = consultants_sheet.get_all_records()
     for consultant in all_consultants:
         if consultant.get('username') == data.get('username') and consultant.get('password') == data.get('password'):
-            # แก้ไข: ส่ง consultant_id กลับไปเป็นสตริง
+            # ส่ง consultant_id กลับไปเป็นสตริง
             return jsonify({"status": "success", "consultant": {"id": str(consultant.get('consultant_id')), "name": consultant.get('name')}})
     return jsonify({"status": "error", "message": "Invalid credentials"}), 401
-
+    
 @app.route("/get-all-bookings")
 def get_all_bookings():
     consultant_id_from_request = request.args.get('consultant_id')
     all_bookings = bookings_sheet.get_all_records()
     if consultant_id_from_request:
-        # ปรับปรุง: กรองข้อมูลโดยแปลงค่าเป็นสตริงทั้งคู่
+        # กรองข้อมูลโดยแปลงค่าเป็นสตริงทั้งคู่
         filtered_bookings = [b for b in all_bookings if str(b.get('consultant_id')) == str(consultant_id_from_request)]
         return jsonify(filtered_bookings)
     else:
         return jsonify(all_bookings)
-
+        
 @app.route("/update-availability", methods=['POST'])
 def update_availability():
     try:
@@ -74,8 +74,7 @@ def update_availability():
         all_availability = availability_sheet.get_all_records()
         found_row_number = None
         for i, row in enumerate(all_availability):
-            # ปรับปรุง: เปรียบเทียบเป็นสตริง
-            if str(row.get('consultant_id')) == str(consultant_id) and row.get('date') == date:
+            if str(row.get('consultant_id')) == consultant_id and row.get('date') == date:
                 found_row_number = i + 2
                 break
         if found_row_number:
